@@ -138,12 +138,10 @@
 
   </section>
 
-  <% if @event.can_front_balance? %>
+  <% if @event.can_front_balance? || auditor_signed_in? %>
     <section class="hcb-code--footer">
-      <% if disbursement.may_mark_rejected? %>
-        <% admin_tool "w-fit" do %>
-          <%= button_to "Process", disbursement_process_admin_path(disbursement), class: "btn", method: :get, data: { turbo_frame: "_top" } %>
-        <% end %>
+      <% admin_tool "w-fit" do %>
+        <%= button_to(disbursement.may_mark_rejected? ? "Process" : "View", disbursement_process_admin_path(disbursement), class: "btn", method: :get, data: { turbo_frame: "_top" }) %>
       <% end %>
 
       <% if disbursement.scheduled? %>
@@ -152,9 +150,11 @@
         <% end %>
       <% end %>
 
-      <p class="my0 italic">
-        HCB transfers are immediately reflected in your account balance.
-      </p>
+      <% if @event.can_front_balance? %>
+        <p class="my0 italic">
+          HCB transfers are immediately reflected in your account balance.
+        </p>
+      <% end %>
     </section>
   <% end %>
 
