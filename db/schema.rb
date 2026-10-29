@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_183000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_29_183000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2447,10 +2447,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_183000) do
     t.bigint "ach_transfer_id"
     t.integer "amount_cents", null: false
     t.datetime "created_at", null: false
+    t.string "failure_reason"
     t.string "hcb_code"
     t.bigint "increase_check_id"
     t.bigint "paypal_transfer_id"
     t.bigint "reimbursement_reports_id", null: false
+    t.datetime "retry_at"
     t.datetime "updated_at", null: false
     t.bigint "wire_id"
     t.bigint "wise_transfer_id"
