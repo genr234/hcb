@@ -1,43 +1,69 @@
 <% title "You’ve been invited to #{@invite.event.name}" %>
 
-<% if @invite.contract && !@invite.contract.signed? %>
-  <% pending_signee = @invite.contract.pending_signee_information %>
-  <%= render "application/callout", type: "warning", title: "You have a pending contract for this organization." do %>
-    <% if pending_signee %>
-      The contract is still pending because <%= pending_signee[:label] %> (<%= pending_signee[:email] %>) hasn't signed it yet.
+<% pending_contract = @invite.contract unless @invite.contract&.signed? %>
+<% signee = pending_contract&.party(:signee) %>
+<% cosigner = pending_contract&.party(:cosigner) %>
+
+<div class="max-w-3xl mx-auto">
+  <% if pending_contract %>
+    <% if signee&.signed? && cosigner&.pending? %>
+      <%= render "application/callout", type: "info", title: "Waiting for your parent or legal guardian to sign" do %>
+        <p class="mt-0">
+          You’ve signed the fiscal sponsorship agreement. We’ve sent it to your parent or legal guardian (<%= cosigner.email %>) to sign next.
+          Once they sign, the HCB team will review it.
+        </p>
+        <p class="mb-0">Questions? <%= help_message %></p>
+      <% end %>
+    <% elsif signee&.signed? %>
+      <%= render "application/callout", type: "success", title: "Your agreement is under review" do %>
+        <p class="mt-0">
+          You’ve signed the fiscal sponsorship agreement and there’s nothing else you need to do.
+          The HCB team is reviewing it now. Once they sign, you’ll automatically join <%= @invite.event.name %>.
+        </p>
+        <p class="mb-0">Questions? <%= help_message %></p>
+      <% end %>
     <% else %>
-      If you have signed the contract, it may still be pending because your parent / legal guardian or HCB point of contact hasn't signed it.
+      <%= render "application/callout", type: "warning", title: "Sign the fiscal sponsorship agreement to join" do %>
+        <p class="mt-0">
+          Before you can join <%= @invite.event.name %>, you need to sign HCB’s fiscal sponsorship agreement.
+          It sets the terms for how <%= @invite.event.name %> uses HCB and lets it operate under HCB’s 501(c)(3) nonprofit status.
+          <% if cosigner %>
+            After you sign, your parent or legal guardian (<%= cosigner.email %>) will also need to sign it.
+          <% elsif signee.nil? %>
+            If you’ve already signed it, your parent or legal guardian or the HCB team may still need to sign it.
+          <% end %>
+        </p>
+        <p class="mb-0">Questions? <%= help_message %></p>
+      <% end %>
     <% end %>
-    <%= help_message %>
   <% end %>
-<% end %>
 
-<main class="center max-w-3xl card mt4 md-p3 mx-auto">
-  <h1 class="mt0 border-0 mb-0"><%= @invite.event.name %></h1>
+  <main class="center card mt4 md-p3">
+    <h1 class="mt0 border-0 mb-0"><%= @invite.event.name %></h1>
 
-  <p class="muted caps bold mt-2">You've been invited to join</p>
+    <p class="muted caps bold mt-2">You've been invited to join</p>
 
-  <% if @organizers.any? %>
-    <div class="flex justify-center flex-wrap">
-      <% @organizers.each do |position| %>
-        <div class="tooltipped tooltipped--s mr1" aria-label="<%= position.user.name %>">
-          <%= avatar_for position.user, size: 64 %>
-        </div>
+    <% if @organizers.any? %>
+      <div class="flex justify-center flex-wrap">
+        <% @organizers.each do |position| %>
+          <div class="tooltipped tooltipped--s mr1" aria-label="<%= position.user.name %>">
+            <%= avatar_for position.user, size: 64 %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="flex justify-center items-center flex-wrap mt-3 gap-2">
+      <%= link_to "Reject", organizer_position_invite_reject_path(@invite), data: { turbo_method: :post }, class: "btn bg-error" %>
+      <% if signee&.signed? %>
+        <%= link_to "View signed agreement", signee.docuseal_signature_url, target: "_blank", class: "btn bg-accent" %>
+      <% elsif signee %>
+        <%= link_to "Sign agreement", contract_party_path(signee), class: "btn bg-accent" %>
+      <% elsif pending_contract&.sent_with_docuseal? %>
+        <%= link_to "View agreement", pending_contract.signee_docuseal_url, class: "btn bg-accent" %>
+      <% elsif pending_contract.nil? %>
+        <%= link_to "Accept invitation", organizer_position_invite_accept_path(@invite), data: { turbo_method: :post }, class: "btn bg-success" %>
       <% end %>
     </div>
-  <% end %>
-
-  <div class="flex justify-center items-center flex-wrap mt-3 gap-2">
-    <%= link_to "Reject", organizer_position_invite_reject_path(@invite), data: { turbo_method: :post }, class: "btn bg-error" %>
-    <% if @invite.contract && !@invite.contract.signed? && !@invite.contract.party(:signee)&.signed? %>
-      <% if @invite.contract.party(:signee).present? %>
-        <%= link_to "View pending contract", contract_party_path(@invite.contract.party(:signee)), class: "btn bg-accent" %>
-      <% elsif @invite.contract.sent_with_docuseal? %>
-        <%= link_to "View pending contract", @invite.contract.signee_docuseal_url, class: "btn bg-accent" %>
-      <% end %>
-    <% else %>
-      <% disabled = @invite.contract.present? && !@invite.contract.signed? %>
-      <p class="tooltipped my-0" aria-label="<%= "The contract must be signed before you can accept this invite" if disabled %>"><%= link_to "Accept invitation", organizer_position_invite_accept_path(@invite), data: { turbo_method: :post }, class: "btn bg-success #{"pointer-events-none" if disabled}", disabled: %></p>
-    <% end %>
-  </div>
-</main>
+  </main>
+</div>

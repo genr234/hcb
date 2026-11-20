@@ -160,22 +160,6 @@ class Contract
       ["hcb", "signee", "cosigner"]
     end
 
-    def pending_signee_information
-      signee = party :signee
-      cosigner = party :cosigner
-      hcb = party :hcb
-
-      if signee && !signee.signed?
-        { label: "You", email: signee.email }
-      elsif cosigner && !cosigner.signed?
-        { label: "Your parent/legal guardian", email: cosigner.email }
-      elsif hcb && !hcb.signed?
-        { label: "HCB point of contact", email: hcb.email }
-      else
-        nil
-      end
-    end
-
     private
 
     def uses_template_of?(plan_class)

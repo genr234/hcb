@@ -138,11 +138,6 @@ class Contract < ApplicationRecord
     docuseal_client.get("submissions/#{external_id}").body
   end
 
-  def pending_signee_information
-    # This method should be overwritten in subclasses of Contract
-    raise NotImplementedError, "The #{self.class.name} model hasn't implemented its own pending signee information."
-  end
-
   def payload
     # This method should be overwritten in subclasses of Contract
     raise NotImplementedError, "The #{self.class.name} model hasn't implemented its own contract payload data."

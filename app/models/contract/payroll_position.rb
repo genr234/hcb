@@ -125,22 +125,6 @@ class Contract
       parties.where(role: :contractor)
     end
 
-    def pending_signee_information
-      organizer = party :organizer
-      hcb = party :hcb
-      contractor = party :contractor
-
-      if organizer && !organizer.signed?
-        { label: "Organizer", email: organizer.email }
-      elsif hcb && !hcb.signed?
-        { label: "HCB point of contact", email: hcb.email }
-      elsif contractor && !contractor.signed?
-        { label: "You", email: contractor.email }
-      else
-        nil
-      end
-    end
-
     private
 
     def document_name
