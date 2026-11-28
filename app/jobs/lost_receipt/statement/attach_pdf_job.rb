@@ -10,8 +10,9 @@ module LostReceipt
         Rails.error.report(error)
         job.arguments.first.abandon!(job.arguments.second)
       end
-      # The PDF renderer and file storage are both remote; give them a few tries.
-      retry_on Faraday::Error, ActiveStorage::Error, wait: :polynomially_longer, attempts: 5 do |job, error|
+      # The PDF renderer and file storage are both remote; give them a few tries. Kept short so
+      # they're over while the transaction still says the statement is generating (PDF_GENERATION_WINDOW).
+      retry_on Faraday::Error, ActiveStorage::Error, wait: 10.seconds, attempts: 3 do |job, error|
         Rails.error.report(error)
         job.arguments.first.abandon!(job.arguments.second)
       end
