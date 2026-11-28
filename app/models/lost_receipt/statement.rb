@@ -30,6 +30,9 @@ module LostReceipt
   # What someone said they bought, saved next to the PDF generated from it.
   class Statement < ApplicationRecord
     CONFIRMATION = "I confirm these details are accurate and that I have made every effort possible to get the receipt."
+    # How long the transaction says the statement is generating. AttachPdfJob's retries, each
+    # bounded by CloudflareBrowserRun's 60 second timeout, finish inside it.
+    PDF_GENERATION_WINDOW = 5.minutes
 
     # Nil until the PDF has been generated and attached, which happens in the background.
     belongs_to :receipt, optional: true, inverse_of: :lost_receipt_statement
@@ -54,6 +57,7 @@ module LostReceipt
     validates :items, length: { minimum: 1, maximum: 50 }
     validate :date_is_not_in_the_future
     validate :items_are_valid
+    # After items_are_valid, so it can read the items' errors instead of validating them again.
     validate :total_matches_transaction
     validate :signer_name_matches_account
 
@@ -120,9 +124,13 @@ module LostReceipt
     end
 
     # The name the signature has to match. Someone signed in signs as themselves;
-    # the emailed link goes to the cardholder. Nil when we know neither.
+    # the emailed link goes to the cardholder. Nil when we know neither, and then
+    # any name is accepted: anyone holding the emailed link can file a statement,
+    # which the PDF records as "not signed in".
     def expected_signer_name
-      (submitter || receiptable.try(:stripe_cardholder)&.user)&.full_name.presence
+      # A ledger item has no cardholder of its own; its HCB code does.
+      cardholder = (receiptable.try(:receipt_hcb_code) || receiptable).try(:stripe_cardholder)
+      (submitter || cardholder&.user)&.full_name.presence
     end
 
     private
@@ -146,7 +154,7 @@ module LostReceipt
 
     def total_matches_transaction
       charged = receiptable.try(:amount_cents)&.abs
-      return if charged.nil? || items.empty? || items.any?(&:invalid?) || total_amount_cents == charged
+      return if charged.nil? || items.empty? || items.any? { |item| item.errors.any? } || total_amount_cents == charged
 
       errors.add(:base, "The items add up to #{Money.new(total_amount_cents, "USD").format}, but the transaction was #{Money.new(charged, "USD").format}")
     end

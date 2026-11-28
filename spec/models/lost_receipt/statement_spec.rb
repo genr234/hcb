@@ -72,6 +72,19 @@ RSpec.describe LostReceipt::Statement do
     expect(hcb_code.receipts).to be_empty
   end
 
+  it "checks the signature against the cardholder when filed on a card charge's ledger item" do
+    stripe_card = create(:stripe_card, :with_stripe_id, stripe_cardholder: create(:stripe_cardholder, user: create(:user, full_name: "Jordan Cardholder")))
+    cpt = create(:canonical_pending_transaction, amount_cents: -879, raw_pending_stripe_transaction: create(:raw_pending_stripe_transaction, stripe_card:))
+    ledger_item = cpt.local_hcb_code.reload.ledger_item
+
+    statement = described_class.new(details)
+    expect(statement.submit(receiptable: ledger_item)).to eq(false)
+    expect(statement.errors[:signer_name]).to include("must match the name on your HCB account")
+
+    statement.signer_name = "Jordan Cardholder"
+    expect(statement.submit(receiptable: ledger_item)).to eq(true)
+  end
+
   it "still attaches the PDF if the signer's account name changes after submitting" do
     user = create(:user, full_name: "Alex Example")
     statement = described_class.new(details.merge(submitter: user))
